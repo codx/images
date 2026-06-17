@@ -1,0 +1,23 @@
+name: Dependabot auto-merge
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch: {}
+
+permissions: {}
+
+concurrency:
+  group: dependabot-automerge-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  automerge:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: run-action/automerge@v1
+        with:
+          cooldown-days: 3

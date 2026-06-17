@@ -44,7 +44,6 @@ contents:
     - tcptraceroute
     - fping
     # bandwidth
-    - iperf
     - iperf3
     - speedtest-cli
     # interfaces & routing
