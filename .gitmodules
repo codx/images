@@ -1,0 +1,3 @@
+[submodule "oci/dbug/vendor/tldr"]
+	path = oci/dbug/vendor/tldr
+	url = https://github.com/tldr-pages/tldr

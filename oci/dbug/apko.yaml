@@ -1,0 +1,99 @@
+contents:
+  repositories:
+    - https://dl-cdn.alpinelinux.org/alpine/edge/main
+    - https://dl-cdn.alpinelinux.org/alpine/edge/community
+    # testing carries trippy, grpcurl, tealdeer (not in main/community)
+    - https://dl-cdn.alpinelinux.org/alpine/edge/testing
+    - '@local ./out/packages'
+  packages:
+    # base
+    - dbug-dotfiles@local
+    - alpine-base
+    - ca-certificates
+    # shell & terminal
+    - fish
+    - tmux
+    # editor
+    - helix
+    # http / grpc / websocket
+    - curl
+    - wget
+    - xh
+    - websocat
+    - grpcurl
+    # tls / crypto
+    - openssl
+    # dns
+    - bind-tools
+    - ldns
+    # connectivity, relays & scanning
+    - socat
+    - netcat-openbsd
+    - openssh-client
+    - nmap
+    # packet capture & crafting
+    - tcpdump
+    - tshark
+    - termshark
+    - ngrep
+    - scapy
+    # reachability & path
+    - iputils
+    - mtr
+    - trippy
+    - tcptraceroute
+    - fping
+    # bandwidth
+    - iperf
+    - iperf3
+    - speedtest-cli
+    # interfaces & routing
+    - iproute2
+    - ethtool
+    - bridge-utils
+    - bird
+    # firewall, nat & load-balancing
+    - iptables
+    - nftables
+    - ipset
+    - ipvsadm
+    - conntrack-tools
+    # traffic & snmp monitoring
+    - iftop
+    - iptraf-ng
+    - net-snmp-tools
+    # process & container inspection
+    - procps
+    - htop
+    - btop
+    - ctop
+    - lsof
+    - strace
+    - ltrace
+    # data (json / yaml)
+    - jq
+    - yq
+    # files & search
+    - eza
+    - fd
+    - ripgrep
+    - less
+    - file
+    # shell ux & help
+    - starship
+    - zoxide
+    - tealdeer
+    # version control
+    - git
+    # system utilities
+    - util-linux
+
+entrypoint:
+  command: /usr/bin/fish
+
+environment:
+  HOME: /root
+  EDITOR: hx
+
+accounts:
+  run-as: 0

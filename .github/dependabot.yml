@@ -1,0 +1,19 @@
+version: 2
+updates:
+  # Bump the vendored tldr-pages submodule (oci/dbug/vendor/tldr). Dependabot's
+  # gitsubmodule ecosystem tracks the submodule's remote branch (upstream main),
+  # so each PR pins a new immutable commit for review — it does not follow tags.
+  - package-ecosystem: gitsubmodule
+    directory: "/"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "deps"
+
+  # Keep the GitHub Actions used by the build workflow current.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "ci"

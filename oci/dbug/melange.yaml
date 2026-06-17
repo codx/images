@@ -1,0 +1,168 @@
+package:
+  name: dbug-dotfiles
+  version: 0.1.0
+  epoch: 0
+  description: Debug pod dotfiles (fish, helix, tealdeer cheatsheets)
+  target-architecture:
+    - all
+  copyright:
+    - license: ISC
+
+environment:
+  contents:
+    repositories:
+      - https://dl-cdn.alpinelinux.org/alpine/edge/main
+    packages:
+      - alpine-baselayout-data
+      - busybox
+
+pipeline:
+  - name: fish config
+    runs: |
+      mkdir -p "${{targets.destdir}}/root/.config/fish/conf.d"
+
+      # rip is not packaged for Alpine, so rm falls back to `rm -i`.
+      cat > "${{targets.destdir}}/root/.config/fish/conf.d/00-shared.fish" <<'EOF'
+      # fish git prompt
+      set __fish_git_prompt_showdirtystate yes
+      set __fish_git_prompt_showstashstate yes
+      set __fish_git_prompt_showupstream yes
+      set __fish_git_prompt_color_branch yellow
+
+      # Status Chars
+      set __fish_git_prompt_char_dirtystate '⚡'
+      set __fish_git_prompt_char_stagedstate '→'
+      set __fish_git_prompt_char_stashstate '↩'
+      set __fish_git_prompt_char_upstream_ahead '↑'
+      set __fish_git_prompt_char_upstream_behind '↓'
+
+      function fish_prompt
+          set last_status $status
+          set_color $fish_color_cwd
+          printf '%s' (prompt_pwd)
+          set_color normal
+          printf '%s ' (__fish_git_prompt)
+          set_color normal
+      end
+
+      set fish_greeting
+
+      set -x EDITOR hx
+
+      function fish_hybrid_key_bindings --description \
+          "Vi-style bindings that inherit emacs-style bindings in all modes"
+          for mode in default insert visual
+              fish_default_key_bindings -M $mode
+              bind -M $mode ctrl-o edit_command_buffer
+          end
+          fish_vi_key_bindings --no-erase
+      end
+      set -g fish_key_bindings fish_hybrid_key_bindings
+
+      if type -q zoxide
+          zoxide init fish | source
+      end
+      if type -q starship
+          starship init fish | source
+      end
+
+      bind ctrl-z '__fish_echo fg 2>/dev/null'
+
+      # Single-char
+      abbr -a -- c cat
+      abbr -a -- e $EDITOR
+      abbr -a -- f fd
+      abbr -a -- g git
+      abbr -a -- l eza
+      abbr -a -- o $EDITOR
+
+      # Navigation
+      abbr -a --set-cursor='%' -- .. '../%'
+      abbr -a --position anywhere --set-cursor='%' -- ... '../../%'
+      abbr -a --position anywhere --set-cursor='%' -- .... '../../../%'
+
+      # Pipe to editor
+      abbr -a --position anywhere --set-cursor='%' -- L '% | hx'
+
+      # Shell safety
+      abbr -a -- cp 'cp -i'
+      abbr -a -- mv 'mv -i'
+      abbr -a -- rm 'rm -i'
+
+      # Listing/searching
+      abbr -a -- ll 'eza -l --icons=auto --group-directories-first'
+      abbr -a --set-cursor='%' -- r 'rg -i. -- "%"'
+      abbr -a --set-cursor='%' -- ro 'rg "%" --no-heading --line-number | cut -d":" -f1-2 | xargs hx'
+      EOF
+
+      cat > "${{targets.destdir}}/root/.config/fish/conf.d/10-dbug.fish" <<'EOF'
+      set -x TMPDIR /tmp
+
+      # The cheatsheet cache is seeded empty and never updated (no network), and
+      # apko normalizes mtimes to epoch 0, so tealdeer always thinks the cache is
+      # ~56 years stale. --quiet drops only that bogus warning; pages still print.
+      function tldr --wraps tldr --description "tldr (cache-age warning suppressed)"
+          command tldr --quiet $argv
+      end
+
+      function dbug-help --description "Show dbug cheatsheets"
+          if test (count $argv) -eq 0
+              tldr dbug
+          else
+              tldr dbug-$argv[1]
+          end
+      end
+      EOF
+
+      cat > "${{targets.destdir}}/root/.config/fish/conf.d/05-theme.fish" <<'EOF'
+      set --global fish_color_autosuggestion 555 brblack
+      set --global fish_color_cancel -r
+      set --global fish_color_command blue
+      set --global fish_color_comment red
+      set --global fish_color_cwd green
+      set --global fish_color_cwd_root red
+      set --global fish_color_end green
+      set --global fish_color_error brred
+      set --global fish_color_escape brcyan
+      set --global fish_color_history_current --bold
+      set --global fish_color_host normal
+      set --global fish_color_host_remote yellow
+      set --global fish_color_normal normal
+      set --global fish_color_operator brcyan
+      set --global fish_color_param cyan
+      set --global fish_color_quote yellow
+      set --global fish_color_redirection cyan --bold
+      set --global fish_color_search_match white --background=brblack
+      set --global fish_color_selection white --bold --background=brblack
+      set --global fish_color_status red
+      set --global fish_color_user brgreen
+      set --global fish_color_valid_path --underline
+      set --global fish_pager_color_completion normal
+      set --global fish_pager_color_description B3A06D yellow -i
+      set --global fish_pager_color_prefix normal --bold --underline
+      set --global fish_pager_color_progress brwhite --background=cyan
+      set --global fish_pager_color_selected_background -r
+      EOF
+
+  - name: tealdeer config + dbug cheatsheets
+    runs: |
+      mkdir -p "${{targets.destdir}}/root/.config/tealdeer/pages"
+      cat > "${{targets.destdir}}/root/.config/tealdeer/config.toml" <<'EOF'
+      [directories]
+      custom_pages_dir = "/root/.config/tealdeer/pages"
+
+      [updates]
+      auto_update = false
+      EOF
+      # Seed the upstream tldr-pages cache so tldr works offline. tealdeer on
+      # Linux only resolves linux/ then common/, so copy just those two and skip
+      # the osx/windows/android/*bsd/etc pages it would never serve here.
+      mkdir -p "${{targets.destdir}}/root/.cache/tealdeer/tldr-pages/pages.en"
+      for p in common linux; do
+        cp -a "vendor/tldr/pages/$p" "${{targets.destdir}}/root/.cache/tealdeer/tldr-pages/pages.en/"
+      done
+      # tealdeer resolves custom pages as "<name>.page.md", so rename on copy.
+      for f in pages/*.md; do
+        base=$(basename "$f" .md)
+        cp "$f" "${{targets.destdir}}/root/.config/tealdeer/pages/$base.page.md"
+      done

@@ -1,0 +1,80 @@
+name: Build and push dbug
+
+# Publishing is gated to manual runs for now. To re-enable on push, uncomment:
+# on:
+#   push:
+#     branches: [main]
+#     paths:
+#       - oci/dbug/**
+#       - .github/workflows/dbug.yml
+#   workflow_dispatch:
+on:
+  workflow_dispatch:
+
+env:
+  GHCR_IMAGE: ghcr.io/codx/dbug
+  DOCKERHUB_IMAGE: docker.io/codo/dbug
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Needed for the vendored tldr-pages submodule (oci/dbug/vendor/tldr),
+          # which the melange build copies the cheatsheet pages from.
+          submodules: recursive
+
+      - uses: chainguard-dev/actions/setup-chainctl@main
+        continue-on-error: true
+
+      - name: Install apko
+        env:
+          APKO_VERSION: 1.2.11
+        run: |
+          curl -sSfL "https://github.com/chainguard-dev/apko/releases/download/v${APKO_VERSION}/apko_${APKO_VERSION}_linux_amd64.tar.gz" \
+            | sudo tar -xz -C /usr/local/bin --strip-components=1 "apko_${APKO_VERSION}_linux_amd64/apko"
+
+      - name: Install melange
+        uses: chainguard-dev/actions/setup-melange@8e9831b95015dca93d04d83dbfc09ab0159c4d7c
+
+      - name: Generate melange signing key
+        run: melange keygen oci/dbug/melange.rsa
+
+      - name: Build melange packages
+        run: |
+          for arch in amd64 arm64; do
+            melange build oci/dbug/melange.yaml \
+              --arch "$arch" \
+              --source-dir oci/dbug \
+              --signing-key oci/dbug/melange.rsa \
+              --out-dir oci/dbug/out/packages
+          done
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Login to Docker Hub
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login docker.io -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+
+      - name: Build and push multi-arch
+        working-directory: oci/dbug
+        run: |
+          apko publish \
+            --arch amd64,arm64 \
+            --keyring-append melange.rsa.pub \
+            apko.yaml \
+            ${{ env.GHCR_IMAGE }}:latest \
+            ${{ env.DOCKERHUB_IMAGE }}:latest
+
+      - name: Update Docker Hub description
+        uses: peter-evans/dockerhub-description@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: codo/dbug
+          readme-filepath: oci/dbug/README.md

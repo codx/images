@@ -1,0 +1,7 @@
+# Local build artifacts (make build / apko / melange)
+**/out/
+
+# OS / editor cruft
+.DS_Store
+*.swp
+*~
