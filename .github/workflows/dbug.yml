@@ -1,14 +1,21 @@
 name: Build and push dbug
 
-# Publishing is gated to manual runs for now. To re-enable on push, uncomment:
+# Pull requests run the melange build to validate the change but never publish:
+# the push steps below are gated on `github.event_name != 'pull_request'`. This
+# gives Dependabot PRs a green check so the auto-merge action can pick them up.
+#
+# Publishing on push is still manual-only for now. To re-enable, uncomment:
 # on:
 #   push:
 #     branches: [main]
 #     paths:
 #       - oci/dbug/**
 #       - .github/workflows/dbug.yml
-#   workflow_dispatch:
 on:
+  pull_request:
+    paths:
+      - oci/dbug/**
+      - .github/workflows/dbug.yml
   workflow_dispatch:
 
 env:
@@ -56,12 +63,15 @@ jobs:
           done
 
       - name: Login to GHCR
+        if: github.event_name != 'pull_request'
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
       - name: Login to Docker Hub
+        if: github.event_name != 'pull_request'
         run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login docker.io -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
 
       - name: Build and push multi-arch
+        if: github.event_name != 'pull_request'
         working-directory: oci/dbug
         run: |
           apko publish \
@@ -72,6 +82,7 @@ jobs:
             ${{ env.DOCKERHUB_IMAGE }}:latest
 
       - name: Update Docker Hub description
+        if: github.event_name != 'pull_request'
         uses: peter-evans/dockerhub-description@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}

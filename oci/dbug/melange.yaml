@@ -98,9 +98,10 @@ pipeline:
       cat > "${{targets.destdir}}/root/.config/fish/conf.d/10-dbug.fish" <<'EOF'
       set -x TMPDIR /tmp
 
-      # The cheatsheet cache is seeded empty and never updated (no network), and
-      # apko normalizes mtimes to epoch 0, so tealdeer always thinks the cache is
-      # ~56 years stale. --quiet drops only that bogus warning; pages still print.
+      # The cache is seeded at build time and never refreshed (no auto-update),
+      # and apko normalizes mtimes to epoch 0, so tealdeer always thinks the
+      # cache is ~56 years stale. --quiet drops only that bogus warning; pages
+      # still print.
       function tldr --wraps tldr --description "tldr (cache-age warning suppressed)"
           command tldr --quiet $argv
       end
