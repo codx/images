@@ -30,13 +30,13 @@ jobs:
       packages: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           # Needed for the vendored tldr-pages submodule (oci/dbug/vendor/tldr),
           # which the melange build copies the cheatsheet pages from.
           submodules: recursive
 
-      - uses: chainguard-dev/actions/setup-chainctl@main
+      - uses: chainguard-dev/setup-chainctl@2cddd35a2f120d9973e58094dc6878c93cf58c28 # v0.5.1
         continue-on-error: true
 
       - name: Install apko
@@ -83,7 +83,7 @@ jobs:
 
       - name: Update Docker Hub description
         if: github.event_name != 'pull_request'
-        uses: peter-evans/dockerhub-description@v4
+        uses: peter-evans/dockerhub-description@432a30c9e07499fd01da9f8a49f0faf9e0ca5b77 # v4.0.2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
