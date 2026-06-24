@@ -1,17 +1,11 @@
 name: Build and push dbug
 
-# Pull requests run the melange build to validate the change but never publish:
-# the push steps below are gated on `github.event_name != 'pull_request'`. This
-# gives Dependabot PRs a green check so the auto-merge action can pick them up.
-#
-# Publishing on push is still manual-only for now. To re-enable, uncomment:
-# on:
-#   push:
-#     branches: [main]
-#     paths:
-#       - oci/dbug/**
-#       - .github/workflows/dbug.yml
 on:
+  push:
+    branches: [main]
+    paths: &dbug-path
+      - oci/dbug/**
+      - .github/workflows/dbug.yml
   pull_request:
     paths:
       - oci/dbug/**
