@@ -21,7 +21,6 @@ pipeline:
     runs: |
       mkdir -p "${{targets.destdir}}/root/.config/fish/conf.d"
 
-      # rip is not packaged for Alpine, so rm falls back to `rm -i`.
       cat > "${{targets.destdir}}/root/.config/fish/conf.d/00-shared.fish" <<'EOF'
       # fish git prompt
       set __fish_git_prompt_showdirtystate yes
@@ -112,6 +111,41 @@ pipeline:
           else
               tldr dbug-$argv[1]
           end
+      end
+
+      # prettyping requires bash, so reimplement its inline latency sparkline
+      # with iputils ping + busybox awk. Autoscales to the observed min/max RTT.
+      # Inspired from: https://github.com/denilsonsa/prettyping
+      function prettyping --wraps ping \
+          --description "ping HOST with an inline latency sparkline (no extra packages)"
+          if test (count $argv) -eq 0
+              echo "usage: prettyping HOST [ping options]" >&2
+              return 2
+          end
+          ping $argv | awk '
+              BEGIN {
+                  bars[0]="▁"; bars[1]="▂"; bars[2]="▃"; bars[3]="▄"
+                  bars[4]="▅"; bars[5]="▆"; bars[6]="▇"; bars[7]="█"
+                  lo=1e9; hi=0; last=0
+                  printf "prettyping — green<50ms yellow<150ms red>=150ms, ! = loss\n"
+              }
+              /icmp_seq=.*time=/ {
+                  s=$0; sub(/.*icmp_seq=/,"",s); sub(/[^0-9].*/,"",s); seq=s+0
+                  if (last>0 && seq>last+1)
+                      for (i=last+1;i<seq;i++) printf "\033[41m!\033[0m"
+                  last=seq
+                  t=$0; sub(/.*time=/,"",t); sub(/ .*/,"",t); rtt=t+0
+                  if (rtt<lo) lo=rtt
+                  if (rtt>hi) hi=rtt
+                  idx = (hi>lo) ? int((rtt-lo)/(hi-lo)*7+0.5) : 0
+                  col = (rtt<50) ? "32" : (rtt<150 ? "33" : "31")
+                  printf "\033[%sm%s\033[0m", col, bars[idx]
+                  fflush()
+                  next
+              }
+              /statistics|packets transmitted|rtt |round-trip/ { printf "\n%s\n", $0 }
+              END { printf "\n" }
+          '
       end
       EOF
 

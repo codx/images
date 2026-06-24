@@ -91,7 +91,7 @@ drill @dns-server example.com MX
 dig example.com ANY +noall +answer
 ```
 
-### HTTP / gRPC / SMTP
+### HTTP / gRPC / WebSocket
 
 ```bash
 # GET request with headers displayed
@@ -106,8 +106,6 @@ curl -H 'Authorization: Bearer token' https://example.com/api
 grpcurl -plaintext host:port list
 # Call a gRPC method
 grpcurl -plaintext -d '{"key":"value"}' host:port package.Service/Method
-# Send a test email via SMTP
-swaks --to user@example.com --server smtp-host:25
 # WebSocket connection
 websocat ws://host:port/path
 ```
@@ -123,7 +121,7 @@ nmap -sT -p 80,443,8080 host
 mtr --tcp -P 443 host
 # Ping sweep a subnet
 fping -a -g 10.0.0.0/24
-# Pretty ping with graph
+# Ping with an inline latency sparkline
 prettyping host
 # TCP port forwarding with socat
 socat TCP-LISTEN:local_port,fork TCP:remote_host:remote_port
@@ -171,14 +169,6 @@ kubectl debug -it node/node --image codo/dbug -- fish
 kubectl run dbug --rm -it --image codo/dbug -- fish
 # Run a debug pod in a specific namespace
 kubectl run dbug --rm -it -n namespace --image codo/dbug -- fish
-# Launch k9s cluster TUI
-k9s
-# Check Calico node status
-calicoctl node status
-# View Calico IP pool configuration
-calicoctl get ippool -o wide
-# Inspect Calico network policies
-calicoctl get networkpolicy -o yaml -A
 ```
 
 <!-- END RECIPES -->

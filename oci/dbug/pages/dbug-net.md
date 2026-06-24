@@ -18,7 +18,7 @@
 
 `fping -a -g {{10.0.0.0/24}}`
 
-- Pretty ping with graph:
+- Ping with an inline latency sparkline:
 
 `prettyping {{host}}`
 

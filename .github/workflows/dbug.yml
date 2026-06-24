@@ -23,7 +23,17 @@ env:
   DOCKERHUB_IMAGE: docker.io/codo/dbug
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Lint recipes (commands must exist in the image)
+        run: oci/dbug/lint-recipes.sh
+
   build:
+    needs: lint
     runs-on: ubuntu-latest
     permissions:
       contents: read

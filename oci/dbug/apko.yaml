@@ -38,11 +38,12 @@ contents:
     - ngrep
     - scapy
     # reachability & path
+    - fping
+    - gping
     - iputils
     - mtr
-    - trippy
     - tcptraceroute
-    - fping
+    - trippy
     # bandwidth
     - iperf3
     - speedtest-cli

@@ -26,8 +26,9 @@ make clean
 make build IMAGE=dbug TAG=latest ARCH=arm64
 ```
 
-Images are built multi-arch (`amd64`, `arm64`) and pushed by the GitHub Actions
-workflow.
+Pull requests build the image to validate changes but don't publish. Publishing
+the multi-arch (`amd64`, `arm64`) image to GHCR and Docker Hub is currently
+manual-only, via the workflow's `workflow_dispatch` trigger.
 
 ## Adding an image
 

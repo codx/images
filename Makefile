@@ -29,7 +29,7 @@ MELANGE := $(DOCKER) run --rm --privileged -v "$(WORK)":/work -w /work $(MELANGE
 APKO    := $(DOCKER) run --rm -v "$(WORK)":/work -w /work $(APKO_IMAGE)
 
 .DEFAULT_GOAL := build
-.PHONY: build load run packages key sizes submodules clean help
+.PHONY: build load run packages key sizes submodules lint clean help
 
 $(OUTDIR):
 	mkdir -p $(OUTDIR)
@@ -65,9 +65,14 @@ run: load
 sizes:
 	IMAGE=$(IMAGE) TAG=$(TAG) ARCH=$(ARCH) DOCKER=$(DOCKER) ./scripts/image-sizes.sh
 
+# Verify every command in oci/$(IMAGE)/pages/*.md resolves to an installed
+# package or a dotfiles function/abbr. Pure shell, no build needed.
+lint:
+	$(DIR)/lint-recipes.sh
+
 clean:
 	rm -rf $(OUTDIR)
 
 help:
-	@echo "Targets: build (default), load, run, packages, key, sizes, clean"
+	@echo "Targets: build (default), load, run, packages, key, sizes, lint, clean"
 	@echo "Vars:    IMAGE=$(IMAGE) TAG=$(TAG) ARCH=$(ARCH)"

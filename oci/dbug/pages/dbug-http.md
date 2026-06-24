@@ -1,6 +1,6 @@
 # dbug-http
 
-> HTTP, gRPC, and SMTP testing with curl, xh, grpcurl, and swaks.
+> HTTP, gRPC, and WebSocket testing with curl, xh, grpcurl, and websocat.
 
 - GET request with headers displayed:
 
@@ -25,10 +25,6 @@
 - Call a gRPC method:
 
 `grpcurl -plaintext -d '{{{"key":"value"}}}' {{host}}:{{port}} {{package.Service/Method}}`
-
-- Send a test email via SMTP:
-
-`swaks --to {{user@example.com}} --server {{smtp-host}}:{{25}}`
 
 - WebSocket connection:
 
