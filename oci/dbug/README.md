@@ -1,5 +1,10 @@
 # dbug
 
+[![GitHub](https://img.shields.io/badge/source-codx%2Fimages-181717?logo=github)](https://github.com/codx/images/tree/main/oci/dbug)
+[![GHCR](https://img.shields.io/badge/ghcr.io-codx%2Fdbug-181717?logo=github)](https://github.com/codx/images/pkgs/container/dbug)
+[![Docker Hub](https://img.shields.io/badge/docker%20hub-codo%2Fdbug-2496ED?logo=docker)](https://hub.docker.com/r/codo/dbug)
+[![Image Size](https://img.shields.io/docker/image-size/codo/dbug/latest?logo=docker&label=size)](https://hub.docker.com/r/codo/dbug/tags)
+
 Network debugging and troubleshooting container. Built on Alpine with
 [apko](https://github.com/chainguard-dev/apko)/[melange](https://github.com/chainguard-dev/melange).
 

@@ -1,3 +1,10 @@
+annotations:
+  org.opencontainers.image.source: https://github.com/codx/images
+  org.opencontainers.image.url: https://github.com/codx/images/tree/main/oci/dbug
+  org.opencontainers.image.title: dbug
+  org.opencontainers.image.description: Network debugging and troubleshooting container
+  org.opencontainers.image.licenses: ISC
+
 contents:
   repositories:
     - https://dl-cdn.alpinelinux.org/alpine/edge/main
