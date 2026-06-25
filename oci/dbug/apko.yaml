@@ -73,7 +73,6 @@ contents:
     - procps
     - htop
     - btop
-    - ctop
     - lsof
     - strace
     - ltrace
