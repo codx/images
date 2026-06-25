@@ -80,6 +80,7 @@ jobs:
         working-directory: oci/dbug
         run: |
           set -euo pipefail
+          mkdir -p sbom   # apko moves SBOMs here but won't create the dir
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             apko build \
               --arch amd64,arm64 \
