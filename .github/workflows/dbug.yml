@@ -3,7 +3,7 @@ name: Build and push dbug
 on:
   push:
     branches: [main]
-    paths: &dbug-path
+    paths:
       - oci/dbug/**
       - .github/workflows/dbug.yml
   pull_request:
@@ -22,7 +22,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Lint recipes (commands must exist in the image)
         run: oci/dbug/lint-recipes.sh
 
@@ -30,11 +30,12 @@ jobs:
     needs: lint
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      packages: write
+      contents: write      # dependency-graph SBOM submission
+      packages: write       # push to GHCR
+      id-token: write       # keyless cosign signing
 
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           # Needed for the vendored tldr-pages submodule (oci/dbug/vendor/tldr),
           # which the melange build copies the cheatsheet pages from.
@@ -66,6 +67,10 @@ jobs:
               --out-dir oci/dbug/out/packages
           done
 
+      # Log in before building so that on push the *same* apko invocation that
+      # pushes the image emits the SBOMs we attest. (Generating SBOMs in a
+      # separate apko run risks attesting an SBOM that doesn't match the pushed
+      # bytes.) On PRs nothing is pushed, so these steps are skipped.
       - name: Login to GHCR
         if: github.event_name != 'pull_request'
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
@@ -74,16 +79,86 @@ jobs:
         if: github.event_name != 'pull_request'
         run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login docker.io -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
 
-      - name: Build and push multi-arch
+      # One apko run per event. PRs `build` a local image (no push) so the SBOM
+      # is still available for scanning; pushes `publish` and, via --sbom-path,
+      # emit the SBOMs of exactly the artifact that was pushed. apko writes one
+      # SPDX per arch (sbom-x86_64.spdx.json, sbom-aarch64.spdx.json) plus an
+      # index SBOM (sbom-index.spdx.json) describing the whole multi-arch image.
+      - name: Build image and SBOMs
+        working-directory: oci/dbug
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            apko build \
+              --arch amd64,arm64 \
+              --keyring-append melange.rsa.pub \
+              --sbom-path sbom \
+              apko.yaml \
+              "$GHCR_IMAGE:latest" \
+              dbug.tar
+          else
+            apko publish \
+              --arch amd64,arm64 \
+              --keyring-append melange.rsa.pub \
+              --sbom-path sbom \
+              apko.yaml \
+              "$GHCR_IMAGE:latest" \
+              "$DOCKERHUB_IMAGE:latest"
+          fi
+
+      - name: Upload SBOM artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sbom
+          path: oci/dbug/sbom/*.spdx.json
+
+      # Submit one arch's SBOM to the dependency graph so Dependabot alerts on the
+      # image's apk contents. The apk package set is identical across arches (only
+      # the compiled binaries inside the packages differ), so a single arch is
+      # representative and avoids double-counting. Push-only (the API writes to
+      # the default branch).
+      - name: Submit SBOM to dependency graph
+        if: github.event_name != 'pull_request'
+        uses: advanced-security/spdx-dependency-submission-action@169d22427d74f3faf93504e70b03eede8dab272a # v0.2.0
+        with:
+          filePath: oci/dbug/sbom
+          filePattern: sbom-x86_64.spdx.json
+
+      - name: Install cosign
+        if: github.event_name != 'pull_request'
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+      # Keyless (OIDC) SBOM attestations. Each published platform digest gets its
+      # own single-arch SBOM, and the index digest (what `:latest` resolves to)
+      # gets the index SBOM. Digests are read back from the registry so each
+      # attestation is bound to the exact bytes that were pushed. Done per repo
+      # because attestations live alongside the image in each registry.
+      - name: Attest SBOMs
         if: github.event_name != 'pull_request'
         working-directory: oci/dbug
         run: |
-          apko publish \
-            --arch amd64,arm64 \
-            --keyring-append melange.rsa.pub \
-            apko.yaml \
-            ${{ env.GHCR_IMAGE }}:latest \
-            ${{ env.DOCKERHUB_IMAGE }}:latest
+          set -euo pipefail
+          for img in "$GHCR_IMAGE:latest" "$DOCKERHUB_IMAGE:latest"; do
+            repo=${img%:*}
+            index_digest=$(docker buildx imagetools inspect "$img" --format '{{.Manifest.Digest}}')
+            cosign attest --yes \
+              --predicate sbom/sbom-index.spdx.json \
+              --type spdxjson \
+              "${repo}@${index_digest}"
+            docker buildx imagetools inspect --raw "$img" \
+              | jq -r '.manifests[] | select(.platform.os != "unknown") | "\(.platform.architecture) \(.digest)"' \
+              | while read -r arch digest; do
+                  case "$arch" in
+                    amd64) sbom=sbom/sbom-x86_64.spdx.json ;;
+                    arm64) sbom=sbom/sbom-aarch64.spdx.json ;;
+                    *) echo "no SBOM for arch: $arch" >&2; exit 1 ;;
+                  esac
+                  cosign attest --yes \
+                    --predicate "$sbom" \
+                    --type spdxjson \
+                    "${repo}@${digest}"
+                done
+          done
 
       - name: Update Docker Hub description
         if: github.event_name != 'pull_request'
@@ -93,3 +168,71 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
           repository: codo/dbug
           readme-filepath: oci/dbug/README.md
+
+  # Report-only vulnerability scan: Trivy, Grype and OSV-Scanner each scan the
+  # apko SBOM and publish SARIF to the Security tab. None fail the build.
+  scan:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write   # upload SARIF to code scanning
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: sbom
+          path: sbom
+
+      - name: Trivy
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: sbom
+          scan-ref: sbom/sbom-x86_64.spdx.json
+          format: sarif
+          output: trivy.sarif
+          exit-code: '0'
+      - name: Upload Trivy SARIF
+        if: github.event_name != 'pull_request'
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4.36.2
+        with:
+          sarif_file: trivy.sarif
+          category: trivy
+
+      - name: Grype
+        id: grype
+        uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7.4.0
+        with:
+          sbom: sbom/sbom-x86_64.spdx.json
+          fail-build: false
+          output-format: sarif
+      - name: Upload Grype SARIF
+        if: github.event_name != 'pull_request'
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4.36.2
+        with:
+          sarif_file: ${{ steps.grype.outputs.sarif }}
+          category: grype
+
+      - name: Stage SBOM for OSV-Scanner
+        run: |
+          mkdir -p osv-in
+          cp sbom/sbom-x86_64.spdx.json osv-in/
+      - name: OSV-Scanner
+        continue-on-error: true   # report-only; never fail the build
+        uses: google/osv-scanner-action/osv-scanner-action@9a498708959aeaef5ef730655706c5a1df1edbc2 # v2.3.8
+        with:
+          scan-args: |-
+            scan
+            source
+            --format=sarif
+            --output-file=osv.sarif
+            --allow-no-lockfiles
+            ./osv-in/
+      - name: Upload OSV SARIF
+        if: github.event_name != 'pull_request'
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4.36.2
+        with:
+          sarif_file: osv.sarif
+          category: osv-scanner
