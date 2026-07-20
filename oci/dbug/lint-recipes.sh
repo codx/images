@@ -56,23 +56,26 @@ abbrs=$(grep -E 'abbr -a' melange.yaml \
 resolved=$(printf '%s\n%s\n%s\n' "$pkgs" "$funcs" "$abbrs" | sort -u)
 
 # Commands referenced by recipes: the leading token of each backticked line.
+# The backticks below are literal grep/sed pattern text, not command substitution.
+# shellcheck disable=SC2016
 commands=$(grep -rhoE '^`[^`]+`' pages/*.md | sed -E 's/^`//; s/`$//' | awk '{print $1}' | sort -u)
 
 missing=()
-for cmd in $commands; do
+while IFS= read -r cmd; do
+  [[ -z "$cmd" ]] && continue
   if grep -qxF "$cmd" <<<"$resolved"; then
     continue
   fi
-  if [[ -n "${PROVIDES[$cmd]:-}" ]] && grep -qxF "${PROVIDES[$cmd]}" <<<"$pkgs"; then
+  if [[ -n "${PROVIDES["$cmd"]:-}" ]] && grep -qxF "${PROVIDES["$cmd"]}" <<<"$pkgs"; then
     continue
   fi
   if [[ "$EXTERNAL" == *" $cmd "* ]]; then
     continue
   fi
   missing+=("$cmd")
-done
+done <<<"$commands"
 
-if (( ${#missing[@]} > 0 )); then
+if (( "${#missing[@]}" > 0 )); then
   echo "ERROR: recipe commands not resolvable in the image:" >&2
   for cmd in "${missing[@]}"; do
     file=$(grep -rlE "^\`$cmd( |\`)" pages/*.md | head -1)
