@@ -58,7 +58,6 @@ contents:
     - iproute2
     - ethtool
     - bridge-utils
-    - bird
     # firewall, nat & load-balancing
     - iptables
     - nftables
