@@ -50,7 +50,7 @@ jobs:
             | sudo tar -xz -C /usr/local/bin --strip-components=1 "apko_${APKO_VERSION}_linux_amd64/apko"
 
       - name: Install melange
-        uses: chainguard-dev/actions/setup-melange@0ffab11a71c1b7bd68ddf94665a8ec88b116223d # v1.6.33
+        uses: chainguard-dev/actions/setup-melange@a9d4aa7202a63f8a6b8f81bb1570a0ca54460ac5 # v1.6.34
 
       - name: Generate melange signing key
         run: melange keygen oci/dbug/melange.rsa
