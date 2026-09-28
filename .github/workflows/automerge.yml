@@ -24,3 +24,4 @@ jobs:
       - uses: run-action/automerge@c27e29b3f58bfdbbc9240fbf69d8ca1c56174f29 # v1.3.0
         with:
           cooldown-days: 3
+          auto-merge: "true"
