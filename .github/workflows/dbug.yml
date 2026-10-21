@@ -50,7 +50,7 @@ jobs:
             | sudo tar -xz -C /usr/local/bin --strip-components=1 "apko_${APKO_VERSION}_linux_amd64/apko"
 
       - name: Install melange
-        uses: chainguard-dev/actions/setup-melange@84b1be4c638f12d4256ddddef17af98853b6d0d9 # v1.6.40
+        uses: chainguard-dev/actions/setup-melange@3403a578b543fd3f0debdaef9dd989ae54e3fcef # v1.6.41
 
       - name: Generate melange signing key
         run: melange keygen oci/dbug/melange.rsa
@@ -214,7 +214,7 @@ jobs:
       - name: Upload Trivy SARIF
         if: github.event_name != 'pull_request'
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
         with:
           sarif_file: trivy.sarif
           category: trivy
@@ -229,7 +229,7 @@ jobs:
       - name: Upload Grype SARIF
         if: github.event_name != 'pull_request'
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
         with:
           sarif_file: ${{ steps.grype.outputs.sarif }}
           category: grype
@@ -240,7 +240,7 @@ jobs:
           cp sbom/sbom-x86_64.spdx.json osv-in/
       - name: OSV-Scanner
         continue-on-error: true   # report-only; never fail the build
-        uses: google/osv-scanner-action/osv-scanner-action@a345acffa64b0eaede81a3d9aae6141214d9c8fc # v2.6.0
+        uses: google/osv-scanner-action/osv-scanner-action@b1d267aea5211fa648d9d442fa64b90dbdcbdd36 # v2.7.0
         with:
           scan-args: |-
             scan
@@ -252,7 +252,7 @@ jobs:
       - name: Upload OSV SARIF
         if: github.event_name != 'pull_request'
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
         with:
           sarif_file: osv.sarif
           category: osv-scanner
