@@ -50,7 +50,7 @@ jobs:
             | sudo tar -xz -C /usr/local/bin --strip-components=1 "apko_${APKO_VERSION}_linux_amd64/apko"
 
       - name: Install melange
-        uses: chainguard-dev/actions/setup-melange@a25ce483d875a46f4c837e85e32e0fda602693f5 # v1.8.1
+        uses: chainguard-dev/actions/setup-melange@d496b2ab65497cac13d77ccd5038b8aae7e8c43b # v1.8.2
 
       - name: Generate melange signing key
         run: melange keygen oci/dbug/melange.rsa
@@ -214,7 +214,7 @@ jobs:
       - name: Upload Trivy SARIF
         if: github.event_name != 'pull_request'
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        uses: github/codeql-action/upload-sarif@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea # v4.39.4
         with:
           sarif_file: trivy.sarif
           category: trivy
@@ -229,7 +229,7 @@ jobs:
       - name: Upload Grype SARIF
         if: github.event_name != 'pull_request'
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        uses: github/codeql-action/upload-sarif@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea # v4.39.4
         with:
           sarif_file: ${{ steps.grype.outputs.sarif }}
           category: grype
@@ -252,7 +252,7 @@ jobs:
       - name: Upload OSV SARIF
         if: github.event_name != 'pull_request'
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        uses: github/codeql-action/upload-sarif@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea # v4.39.4
         with:
           sarif_file: osv.sarif
           category: osv-scanner
